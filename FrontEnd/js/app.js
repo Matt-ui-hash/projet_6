@@ -1,6 +1,18 @@
+// Définition idempotente des constantes globales (sans dépendre d'autres fichiers)
+window.API_BASE_URL = window.API_BASE_URL || "http://localhost:5678/api";
+window.ENDPOINTS = window.ENDPOINTS || {
+  LOGIN: window.API_BASE_URL + "/users/login",
+  WORKS: window.API_BASE_URL + "/works",
+  CATEGORIES: window.API_BASE_URL + "/categories"
+};
+
+// Constantes locales pour ce fichier (évite les duplications internes)
+const WORKS_URL = window.ENDPOINTS.WORKS;
+const CATEGORIES_URL = window.ENDPOINTS.CATEGORIES;
+
 async function getworks(filter){
     document.querySelector(".gallery").innerHTML="";
-    const url ="http://localhost:5678/api/works";
+    const url = WORKS_URL;
     try{
         const response =await fetch(url);
         if(!response.ok){
@@ -42,19 +54,7 @@ function setFilter(category) {
         const portfolioSection = document.querySelector('#portfolio');
         portfolioSection.insertBefore(container, portfolioSection.querySelector('.gallery'));
     }
-    // Ajouter le bouton "Tous" une seule fois
-    if (!window.filtersInitialized) {
-        const allBtn = document.createElement('button');
-        allBtn.textContent = 'Tous';
-        allBtn.className = 'filter-btn active';
-        allBtn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            allBtn.classList.add('active');
-            getworks();
-        });
-        container.appendChild(allBtn);
-        window.filtersInitialized = true;
-    }
+    // Ne pas créer le bouton "Tous" dynamiquement, il est géré en HTML
     // Crée le bouton pour la catégorie
     const button = document.createElement('button');
     button.textContent = category.name;
@@ -68,7 +68,7 @@ function setFilter(category) {
 }
 
 async function getcategories(){
-    const url ="http://localhost:5678/api/categories";
+    const url = CATEGORIES_URL;
     try{
         const response =await fetch(url);
         if(!response.ok){
@@ -76,7 +76,21 @@ async function getcategories(){
         }
         const json = await response.json();
         console.log(json);
-        for(i=0;i<json.length;i++){
+        // Ne pas générer les filtres en mode édition
+        if (document.querySelector('.edition')) {
+            return;
+        }
+        // Lier le bouton Tous statique si présent
+        const allBtn = document.getElementById('filter-all');
+        if (allBtn && !allBtn.dataset.bound) {
+            allBtn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                allBtn.classList.add('active');
+                getworks();
+            });
+            allBtn.dataset.bound = 'true';
+        }
+        for(let i=0;i<json.length;i++){
             setFilter(json[i])
         }
     } catch(error){
@@ -110,7 +124,7 @@ document.addEventListener("click", function(e) {
 
 // Ajoute cette fonction dans app.js
 async function renderModalGallery() {
-  const url = "http://localhost:5678/api/works";
+const url = WORKS_URL;
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Response status: ${response.status}`);
@@ -148,7 +162,7 @@ async function renderModalGallery() {
 
 // Fonction de suppression
 async function deleteworkById(id) {
-  const deleteApi = "http://localhost:5678/api/works/";
+  const deleteApi = WORKS_URL + "/";
   const token = sessionStorage.getItem("authToken");
   let response = await fetch(deleteApi + id, {
     method: "DELETE",
@@ -325,7 +339,7 @@ async function deletework(event){
 
 // Fonction pour charger les catégories dans le select
 async function loadCategoriesForSelect() {
-  const url = "http://localhost:5678/api/categories";
+  const url = CATEGORIES_URL;
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Response status: ${response.status}`);
@@ -347,7 +361,7 @@ async function loadCategoriesForSelect() {
 
 // Fonction pour ajouter une nouvelle image
 async function addNewWork(formData) {
-  const addWorkApi = "http://localhost:5678/api/works";
+  const addWorkApi = WORKS_URL;
   const token = sessionStorage.getItem("authToken");
   
   try {
@@ -539,6 +553,34 @@ function setupImagePreview() {
 document.addEventListener('DOMContentLoaded', function() {
   const addPhotoForm = document.getElementById('add-photo-form');
   if (addPhotoForm) {
+    // Activer/désactiver le bouton Valider selon l'état des champs
+    const submitBtn = addPhotoForm.querySelector('input[type="submit"]');
+    const updateSubmitButtonState = () => {
+      const fileInput = document.getElementById('file');
+      const titleInput = document.getElementById('title');
+      const categoryInput = document.getElementById('category');
+      const isValid = !!(fileInput && fileInput.files[0] && titleInput && titleInput.value.trim() && categoryInput && categoryInput.value);
+      if (submitBtn) {
+        submitBtn.disabled = !isValid;
+        if (isValid) {
+          submitBtn.classList.add('active');
+        } else {
+          submitBtn.classList.remove('active');
+        }
+      }
+    };
+
+    // Initial state
+    updateSubmitButtonState();
+
+    // Ecouteurs de changements
+    const fileEl = document.getElementById('file');
+    const titleEl = document.getElementById('title');
+    const categoryEl = document.getElementById('category');
+    if (fileEl) fileEl.addEventListener('change', updateSubmitButtonState);
+    if (titleEl) titleEl.addEventListener('input', updateSubmitButtonState);
+    if (categoryEl) categoryEl.addEventListener('change', updateSubmitButtonState);
+
     addPhotoForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       
@@ -570,6 +612,9 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Appeler la fonction d'ajout
       await addNewWork(formData);
+
+      // Mettre à jour l'état du bouton après réinitialisation du formulaire
+      updateSubmitButtonState();
     });
   }
   

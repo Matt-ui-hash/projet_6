@@ -182,7 +182,6 @@ input[type="submit"]{
 	font-family: 'Syne';
 	font-weight: 700;
 	color: white;
-	background-color: #1D6154;
 	margin : 2em auto ;
 	width: 180px;
 	text-align: center;
@@ -960,7 +959,6 @@ h3{
 
 /* Bouton de validation vert dans la deuxième modale */
 .add-modal input[type="submit"] {
-  background: #1D6154;
   color: #fff;
   border: none;
   border-radius: 20px;

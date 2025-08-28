@@ -1,6 +1,13 @@
-const loginApi ='http://localhost:5678/api/users/login';
-const email_true='sophie.bluel@test.tld';
-const password_true='S0phie';
+
+// Définition idempotente des constantes globales (au cas où app.js n'est pas chargé)
+window.API_BASE_URL = window.API_BASE_URL || "http://localhost:5678/api";
+window.ENDPOINTS = window.ENDPOINTS || {
+  LOGIN: window.API_BASE_URL + "/users/login",
+  WORKS: window.API_BASE_URL + "/works",
+  CATEGORIES: window.API_BASE_URL + "/categories"
+};
+
+const LOGIN_URL = window.ENDPOINTS.LOGIN;
 
 document.getElementById("loginform").addEventListener("submit" , handleSubmit);
 
@@ -16,7 +23,7 @@ let user = {
      password : document.getElementById("password").value,
  };
 
- let response = await fetch(loginApi,{
+ let response = await fetch(LOGIN_URL,{
      method: "POST" ,
      headers: {
          "Content-Type": "application/json",
